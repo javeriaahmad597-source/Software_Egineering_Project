@@ -1,8 +1,8 @@
 ### Jira Ticket
-Link / ID: SCRUM-21 (https://javeriaahmad.atlassian.net/browse/SCRUM-21)
+Link / ID: SCRUM-
 
 ### What did you change?
-- 
+- nothing
 
 ### How was this tested?
 - [ ] Ran the script locally in terminal
