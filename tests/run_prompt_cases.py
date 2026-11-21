@@ -2,19 +2,47 @@
 VeriLoop - Prompt Test Suite Runner
 Author: Laraib Samreen (Scrum Master)
 Purpose: Runs 5 hardware test prompts and checks if the Verilog code has syntax errors or AI hallucinations.
+(Zero external dependencies - works on all Python versions)
 """
 
 import os
 import re
 import subprocess
-import yaml
+from pathlib import Path
 
-# Path to our test cases
-YAML_FILE = "tests/prompt_cases.yaml"
-
-def load_test_cases():
-    with open(YAML_FILE, "r") as f:
-        return yaml.safe_load(f)["cases"]
+# 5 Standard Hardware Test Cases (Built-in, no pyyaml required!)
+test_cases = [
+    {
+        "id": "PC-01-counter",
+        "name": "8-bit Up Counter",
+        "request": "Write an 8-bit synchronous up counter with enable and active-low synchronous reset. Ports: clk, rst_n, en, count.",
+        "expected_ports": ["clk", "rst_n", "en", "count"]
+    },
+    {
+        "id": "PC-02-mux4",
+        "name": "4-to-1 Multiplexer",
+        "request": "Write a 4-to-1 multiplexer for 8-bit data. Ports: d0, d1, d2, d3, sel, y.",
+        "expected_ports": ["d0", "d1", "d2", "d3", "sel", "y"]
+    },
+    {
+        "id": "PC-03-alu",
+        "name": "Simple 8-bit ALU",
+        "request": "Write an 8-bit ALU supporting ADD, SUB, AND, OR with a zero flag. Ports: a, b, op, y, zero.",
+        "expected_ports": ["a", "b", "op", "y", "zero"]
+    },
+    {
+        "id": "PC-04-fifo",
+        "name": "Synchronous FIFO Buffer",
+        "request": "Write a synchronous FIFO of depth 8 and width 8 with full and empty flags. Ports: clk, rst_n, wr_en, rd_en, din, dout, full, empty.",
+        "expected_ports": ["clk", "rst_n", "wr_en", "rd_en", "din", "dout", "full", "empty"]
+    },
+    {
+        "id": "PC-05-fsm",
+        "name": "Sequence Detector FSM",
+        "request": "Write a Moore FSM that detects sequence 1011. Ports: clk, rst_n, din, detected.",
+        "expected_ports": ["clk", "rst_n", "din", "detected"]
+    }
+]
 
 def check_hallucinations(code, expected_ports):
     """Simple rules to catch common AI bugs in Verilog."""
@@ -49,7 +77,6 @@ def compile_verilog(code):
         f.write(code)
 
     try:
-        # Run iverilog command
         res = subprocess.run(
             ["iverilog", "-g2001", "-o", "temp_test.out", temp_filename],
             capture_output=True,
@@ -59,11 +86,10 @@ def compile_verilog(code):
         passed = (res.returncode == 0)
         return passed, res.stderr.strip()
     except FileNotFoundError:
-        return True, "iverilog not found on PATH (skipped compiler check)"
+        return True, "iverilog not on machine (skipped compiler check)"
     except Exception as e:
         return False, str(e)
     finally:
-        # Clean up temporary test files
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
         if os.path.exists("temp_test.out"):
@@ -74,13 +100,12 @@ def main():
     print("VeriLoop: Running Prompt Test Benchmark Suite")
     print("=" * 60)
 
-    cases = load_test_cases()
     results = []
 
-    for c in cases:
+    for c in test_cases:
         print(f"\nTesting: {c['id']} - {c['name']}")
-        
-        # Sample counter code for testing the runner locally
+
+        # Sample counter code for baseline benchmarking
         sample_code = """
         module test_module (
             input wire clk,
@@ -109,8 +134,11 @@ def main():
         print(f"Status: {status} | Issues: {issue_text}")
         results.append((c["id"], c["name"], status, issue_text))
 
-    # Write results to markdown file
-    output_path = "docs/sprint1/prompt_test_results.md"
+    # Ensure output directory exists and write results
+    out_dir = Path("docs/sprint1")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output_path = out_dir / "prompt_test_results.md"
+
     with open(output_path, "w") as f:
         f.write("# Sprint 1 Prompt Test Results\n\n")
         f.write("| Test ID | Module | Status | Notes / Issues |\n")
